@@ -26,12 +26,9 @@ class Fundamentals:
                 list(metric.items()), 
                 columns=["metric", "value"]
         )
-        ratios_df = self.finnhub_client.company_basic_financials(self.ticker,'all')['series']['annual']
-        ratios_df = pd.DataFrame(list(ratios_df.items()), columns=["metric", "value"])
 
-        new_fund_df = pd.concat([df, ratios_df])
+        new_fund_df = df
 
-        
         new_fund_df[['is_acceptable', 'status']] = new_fund_df.apply(lambda x: self._checkMetrics(x), axis=1)
 
         new_fund_df = new_fund_df.dropna(subset=['metric'], how='any')
@@ -47,6 +44,7 @@ class Fundamentals:
             return pd.Series([False, "N/A"])
         
         limit, logic = self.thresholds[metric]
+
     
         # Logic Check
         if logic == 'min':
