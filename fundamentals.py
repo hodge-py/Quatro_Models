@@ -172,14 +172,14 @@ class Fundamentals:
 
         # --- 3. Build the Audit Results ---
         audit_results = [
-            ["Calculated_FCF", fcf],
-            ["FCF_Dividend_Coverage", fcf_div_coverage],
-            ["Cash_Runway_Months", runway],
-            ["Accrual_Quality_Ratio", accrual_ratio],
-            ["SBC_Percent_of_CashFlow", sbc_ratio]
+            ["Calculated_FCF", fcf, "Acceptable" if fcf > 0 else "Not Acceptable"],
+            ["FCF_Dividend_Coverage", fcf_div_coverage ,"Acceptable" if fcf_div_coverage > 1.1 else "Not Acceptable"],
+            ["Cash_Runway_Months", runway, "Acceptable" if runway > 12 else "Not Acceptable"],
+            ["Accrual_Quality_Ratio", accrual_ratio, "Acceptable" if accrual_ratio < 0.1 else "Not Acceptable"],
+            ["SBC_Percent_of_CashFlow", sbc_ratio, "Acceptable" if sbc_ratio < 10 else "Not Acceptable"],
         ]
 
-        return pd.DataFrame(audit_results, columns=["fundamental", "value"])
+        return pd.DataFrame(audit_results, columns=["fundamental", "value", "status"])
 
 
 
