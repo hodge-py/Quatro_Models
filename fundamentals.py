@@ -5,6 +5,7 @@ import seaborn as sns
 import numpy as np
 import yfinance as yf
 import pprint
+from datetime import datetime, timedelta
 
 
 class Fundamentals:
@@ -57,10 +58,13 @@ class Fundamentals:
 
     
         # Logic Check
-        if logic == 'min':
-            is_ok = value >= limit
+        if value is not None:
+            if logic == 'min':
+                is_ok = value >= limit
+            else:
+                is_ok = value <= limit
         else:
-            is_ok = value <= limit
+            is_ok = None
             
         # Status Labeling
         status = "Pass" if is_ok else "Fail"
@@ -120,66 +124,135 @@ class Fundamentals:
         return quote_df
     
     def get_history(self):
-        data = yf.download(self.ticker, auto_adjust=True, period='max')
+        data = yf.download(self.ticker, auto_adjust=True, period='5y')
         return data
 
     def get_other_metric(self):
-        other_metrics = {}
-        # FREE CASH FLOW
-        finacials = self.finnhub_client.financials_reported(symbol=self.ticker,freq='annual')
-        #pprint.pprint(finacials)
-        cf = finacials['data'][0]['report']['cf']
-        #pprint.pprint(cf)
-        netOperatingCashFlow = 0
-        capex = 0
-        for item in cf:
-            other_metrics[item['concept']] = item['value']
-        
-        self.other_metrics = pd.DataFrame.from_dict(other_metrics, orient='index', columns=['value'])
+        try:
+            other_metrics = {}
+            # FREE CASH FLOW
+            finacials = self.finnhub_client.financials_reported(symbol=self.ticker,freq='annual')
+            #pprint.pprint(finacials)
+            cf = finacials['data'][0]['report']['cf']
+            #pprint.pprint(cf)
+            netOperatingCashFlow = 0
+            capex = 0
+            for item in cf:
+                other_metrics[item['concept']] = item['value']
+            
+            self.other_metrics = pd.DataFrame.from_dict(other_metrics, orient='index', columns=['value'])
 
-        # Helper to safely get values from the index
-        def get_v(concept):
-            return self.other_metrics.loc[concept, 'value'] if concept in self.other_metrics.index else 0
+            # Helper to safely get values from the index
+            def get_v(concept):
+                return self.other_metrics.loc[concept, 'value'] if concept in self.other_metrics.index else 0
 
-        # --- 1. Basic Extractions ---
-        net_inc = get_v('us-gaap_NetIncomeLoss')
-        op_cash = get_v('us-gaap_NetCashProvidedByUsedInOperatingActivities')
-        capex = get_v('us-gaap_PaymentsToAcquirePropertyPlantAndEquipment')
-        sbc = get_v('us-gaap_ShareBasedCompensation')
-        div_paid = get_v('us-gaap_PaymentsOfDividends')
-        
-        # --- 2. Advanced Calculations ---
-        
-        # Free Cash Flow (FCF)
-        fcf = op_cash - capex
-        
-        # FCF Dividend Coverage (Can they afford their dividend?)
-        # Ratio > 1.0 means they pay dividends out of cash flow, not debt.
-        fcf_div_coverage = fcf / abs(div_paid) if div_paid != 0 else 0
-        
-        # Cash Burn Check (Months of Runway)
-        # Assumes you have 'cash_balance' from the Balance Sheet index
-        cash_bal = get_v('us-gaap_CashAndCashEquivalentsAtCarryingValue')
-        runway = (cash_bal / (abs(fcf) / 12)) if fcf < 0 else 99 # 99 = Self-Sustaining
-        
-        # Earnings Quality (Accrual Ratio)
-        # (Net Income - Operating Cash) / Total Assets
-        assets = get_v('us-gaap_Assets') 
-        accrual_ratio = (net_inc - op_cash) / assets if assets != 0 else 0
+            # --- 1. Basic Extractions ---
+            net_inc = get_v('us-gaap_NetIncomeLoss')
+            op_cash = get_v('us-gaap_NetCashProvidedByUsedInOperatingActivities')
+            capex = get_v('us-gaap_PaymentsToAcquirePropertyPlantAndEquipment')
+            sbc = get_v('us-gaap_ShareBasedCompensation')
+            div_paid = get_v('us-gaap_PaymentsOfDividends')
+            
+            # --- 2. Advanced Calculations ---
+            
+            # Free Cash Flow (FCF)
+            fcf = op_cash - capex
+            
+            # FCF Dividend Coverage (Can they afford their dividend?)
+            # Ratio > 1.0 means they pay dividends out of cash flow, not debt.
+            fcf_div_coverage = fcf / abs(div_paid) if div_paid != 0 else 0
+            
+            # Cash Burn Check (Months of Runway)
+            # Assumes you have 'cash_balance' from the Balance Sheet index
+            cash_bal = get_v('us-gaap_CashAndCashEquivalentsAtCarryingValue')
+            runway = (cash_bal / (abs(fcf) / 12)) if fcf < 0 else 99 # 99 = Self-Sustaining
+            
+            # Earnings Quality (Accrual Ratio)
+            # (Net Income - Operating Cash) / Total Assets
+            assets = get_v('us-gaap_Assets') 
+            accrual_ratio = (net_inc - op_cash) / assets if assets != 0 else 0
 
-        # SBC Reliance (Are they diluting shareholders to pay staff?)
-        sbc_ratio = (sbc / op_cash) * 100 if op_cash != 0 else 0
+            # SBC Reliance (Are they diluting shareholders to pay staff?)
+            sbc_ratio = (sbc / op_cash) * 100 if op_cash != 0 else 0
 
-        # --- 3. Build the Audit Results ---
-        audit_results = [
-            ["Calculated_FCF", fcf, "Acceptable" if fcf > 0 else "Not Acceptable"],
-            ["FCF_Dividend_Coverage", fcf_div_coverage ,"Acceptable" if fcf_div_coverage > 1.1 else "Not Acceptable"],
-            ["Cash_Runway_Months", runway, "Acceptable" if runway > 12 else "Not Acceptable"],
-            ["Accrual_Quality_Ratio", accrual_ratio, "Acceptable" if accrual_ratio < 0.1 else "Not Acceptable"],
-            ["SBC_Percent_of_CashFlow", sbc_ratio, "Acceptable" if sbc_ratio < 10 else "Not Acceptable"],
-        ]
+            # --- 3. Build the Audit Results ---
+            audit_results = [
+                ["Calculated_FCF", fcf, "Acceptable" if fcf > 0 else "Not Acceptable"],
+                ["FCF_Dividend_Coverage", fcf_div_coverage ,"Acceptable" if fcf_div_coverage > 1.1 else "Not Acceptable"],
+                ["Cash_Runway_Months", runway, "Acceptable" if runway > 12 else "Not Acceptable"],
+                ["Accrual_Quality_Ratio", accrual_ratio, "Acceptable" if accrual_ratio < 0.1 else "Not Acceptable"],
+                ["SBC_Percent_of_CashFlow", sbc_ratio, "Acceptable" if sbc_ratio < 10 else "Not Acceptable"],
+            ]
 
-        return pd.DataFrame(audit_results, columns=["fundamental", "value", "status"])
+            return pd.DataFrame(audit_results, columns=["fundamental", "value", "status"])
+        
+        except:
+            def get_v_robust(keywords):
+                """
+                keywords: A list of strings to look for (e.g., ['NetIncome', 'ProfitLoss'])
+                """
+                for key in self.metric_df.index:
+                    # Check if any of our keywords exist in the GAAP concept name
+                    if any(word.lower() in key.lower() for word in keywords):
+                        return self.metric_df.loc[key, 'value']
+                return 0
+
+            # --- Updated Extractions using the Robust Finder ---
+            # Net Income aliases
+            net_inc = get_v_robust(['NetIncomeLoss', 'ProfitLoss'])
+
+            # Operating Cash Flow aliases
+            op_cash = get_v_robust(['NetCashProvidedByUsedInOperatingActivities', 'CashGeneratedFromOperations'])
+
+            # CapEx aliases
+            capex = get_v_robust(['PaymentsToAcquirePropertyPlantAndEquipment', 'CapitalExpenditures'])
+
+            # Cash Balance aliases
+            cash_bal = get_v_robust(['CashAndCashEquivalentsAtCarryingValue', 'CashAndEquivalents'])
+
+            # --- Updated Extractions using the Robust Finder ---
+            # Net Income aliases
+            net_inc = get_v_robust(['NetIncomeLoss', 'ProfitLoss'])
+
+            # Operating Cash Flow aliases
+            op_cash = get_v_robust(['NetCashProvidedByUsedInOperatingActivities', 'CashGeneratedFromOperations'])
+
+            # CapEx aliases
+            capex = get_v_robust(['PaymentsToAcquirePropertyPlantAndEquipment', 'CapitalExpenditures'])
+
+            # Cash Balance aliases
+            cash_bal = get_v_robust(['CashAndCashEquivalentsAtCarryingValue', 'CashAndEquivalents'])
+
+            return pd.DataFrame([net_inc, op_cash, capex, cash_bal], columns=["value"], index=["Net Income", "Operating Cash Flow", "Capital Expenditures", "Cash Balance"])
+
+    def get_insider_sentiment(self):
+        end_date = datetime.now().strftime('%Y-%m-%d')
+        start_date = (datetime.now() - timedelta(days=90)).strftime('%Y-%m-%d')
+        
+        # Fetch data
+        trades = self.finnhub_client.stock_insider_transactions(self.ticker, start_date, end_date)
+        data = trades.get('data', [])
+        
+        if not data:
+            return ["insider_signal", "No Recent Activity"]
+
+        # Calculate Net Buying
+        # change > 0 is a buy, change < 0 is a sale
+        net_shares = sum(item['change'] for item in data)
+        
+        if net_shares > 0:
+            signal = "Bullish (Net Buy)"
+        elif net_shares < 0:
+            signal = "Bearish (Net Sell)"
+        else:
+            signal = "Neutral"
+            
+        return ["insider_signal", f"{signal}: {net_shares:,.0f} shares"]
+    
+
+    def get_news(self):
+        news = self.finnhub_client.company_news(self.ticker, _from=self.start_date, to=self.end_date)
+        return news
 
 
 
