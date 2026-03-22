@@ -251,7 +251,13 @@ class Fundamentals:
     
 
     def get_news(self):
+        news_df = pd.DataFrame(columns=['date', 'headline', 'summary' ,'url'])
         news = self.finnhub_client.company_news(self.ticker, _from=self.start_date, to=self.end_date)
+        for x in news:
+            del x['id']
+            del x['image']
+            del x['related']
+            x['datetime'] = datetime.fromtimestamp(x['datetime']).strftime('%Y-%m-%d %H:%M:%S')
         return news
 
 
