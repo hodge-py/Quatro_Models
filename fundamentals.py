@@ -298,10 +298,18 @@ class Fundamentals:
         revenueHold = np.array([])
         for x in revenue:
             for y in x['report']['ic']:
-                if y['concept'] == 'us-gaap_RevenueFromContractWithCustomerExcludingAssessedTax':
+                if y['concept'] == 'us-gaap_RevenueFromContractWithCustomerExcludingAssessedTax' and y['value'] > 0:
+                    revenueHold = np.append(revenueHold, y['value'])
+                elif y['concept'] == 'us-gaap_RevenueFromContractWithCustomerIncludingAssessedTax' and y['value'] > 0:
+                    revenueHold = np.append(revenueHold, y['value'])
+                elif y['concept'] == 'us-gaap_RevenueFromContractWithCustomer' and y['value'] > 0:
                     revenueHold = np.append(revenueHold, y['value'])
         
         revenueHold = revenueHold[::-1]
+        ticker = yf.Ticker(self.ticker)
+        print(ticker.financials.loc['Total Revenue'])
+        if len(revenueHold) == 0:
+            revenueHold = np.append(revenueHold, ticker.financials.loc['Total Revenue'])
         upslope = np.arange(0, len(revenueHold), 1)
         print(f"Revenue: {revenueHold}")
         sns.barplot(x=upslope, y=revenueHold)
@@ -325,7 +333,7 @@ class Fundamentals:
         sns.scatterplot(x=upslope, y=reverseActual)
         sns.scatterplot(x=upslope, y=reverseEstimate)
         #sns.scatterplot(x=upslope, y=surpriseValue)
-        
+
         plt.legend(['Actual', 'Estimate'])
         plt.show()
         
