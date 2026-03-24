@@ -6,6 +6,7 @@ import numpy as np
 import yfinance as yf
 import pprint
 from datetime import datetime, timedelta
+import matplotlib.pyplot as plt
 
 
 class Fundamentals:
@@ -264,7 +265,7 @@ class Fundamentals:
     def get_inflections(self):
         company_data = self.company_financials['series']['quarterly']['eps']
         earningsPerShare = np.array([])
-        
+        revueneShares = np.array([])
         totalDebtToCapital = self.metric_df.loc['totalDebt/totalEquityQuarterly','value']
         for x in company_data:
             earningsPerShare = np.append(earningsPerShare, x['v'])
@@ -272,11 +273,61 @@ class Fundamentals:
         down = np.arange(len(earningsPerShare), 0, -1)
 
         average_weighted = round(np.average(earningsPerShare, weights=down),4)
+
+        standard = np.std(earningsPerShare)
         
         print(f"Average Weighted EPS: {average_weighted}")
-        print(f"lower bound EPS: {average_weighted * 0.8}")
-        print(f"upper bound EPS: {average_weighted * 1.2}")
+        print(f"Lower Standard Deviation: {average_weighted - standard}")
+        print(f"Upper Standard Deviation: {average_weighted + standard}")
         print(f"Total Debt/Total Equity: {totalDebtToCapital}")
+
+        up = np.arange(0, len(earningsPerShare), 1)
+
+        reverseEarningsPerShare = earningsPerShare[::-1]
+
+        ax = sns.lineplot(x=up, y=reverseEarningsPerShare)
+        ax.axhline(y=average_weighted, color='r')
+        ax.axhline(y=average_weighted + standard, color='g')
+        ax.axhline(y=average_weighted - standard, color='g')
+        sns.scatterplot(x=up, y=reverseEarningsPerShare)
+        plt.show()
+
+
+    def revenue_growth(self):
+        revenue = self.finnhub_client.financials_reported(symbol=self.ticker, freq='annual')['data']
+        revenueHold = np.array([])
+        for x in revenue:
+            for y in x['report']['ic']:
+                if y['concept'] == 'us-gaap_RevenueFromContractWithCustomerExcludingAssessedTax':
+                    revenueHold = np.append(revenueHold, y['value'])
+        
+        revenueHold = revenueHold[::-1]
+        upslope = np.arange(0, len(revenueHold), 1)
+        print(f"Revenue: {revenueHold}")
+        sns.barplot(x=upslope, y=revenueHold)
+        plt.show()
+
+
+    def eps_surprise(self):
+        surprise = self.finnhub_client.company_earnings(self.ticker, limit=8)
+        actual = np.array([])
+        estimate = np.array([])
+        for x in surprise:
+            actual = np.append(actual, x['actual'])
+            estimate = np.append(estimate, x['estimate'])
+
+        surpriseValue = actual - estimate
+
+        reverseActual = actual[::-1]
+        reverseEstimate = estimate[::-1]
+
+        upslope = np.arange(0, len(surpriseValue), 1)
+        sns.scatterplot(x=upslope, y=reverseActual)
+        sns.scatterplot(x=upslope, y=reverseEstimate)
+        #sns.scatterplot(x=upslope, y=surpriseValue)
+        
+        plt.legend(['Actual', 'Estimate'])
+        plt.show()
         
 
 
