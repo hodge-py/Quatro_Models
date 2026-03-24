@@ -26,6 +26,7 @@ class Fundamentals:
         self.metric_df = None
         self.close_price = float(self.finnhub_client.quote(self.ticker)['c'])
         self.other_metrics = None
+        self.company_financials = self.finnhub_client.company_basic_financials(self.ticker,'all')
     
     def get_fundamentals(self):
         metric = self.finnhub_client.company_basic_financials(self.ticker,'all')['metric']
@@ -259,6 +260,27 @@ class Fundamentals:
             del x['related']
             x['datetime'] = datetime.fromtimestamp(x['datetime']).strftime('%Y-%m-%d %H:%M:%S')
         return news
+
+    def get_inflections(self):
+        company_data = self.company_financials['series']['quarterly']['eps']
+        earningsPerShare = np.array([])
+        
+        totalDebtToCapital = self.metric_df.loc['totalDebt/totalEquityQuarterly','value']
+        for x in company_data:
+            earningsPerShare = np.append(earningsPerShare, x['v'])
+
+        down = np.arange(len(earningsPerShare), 0, -1)
+
+        average_weighted = round(np.average(earningsPerShare, weights=down),4)
+        
+        print(f"Average Weighted EPS: {average_weighted}")
+        print(f"lower bound EPS: {average_weighted * 0.8}")
+        print(f"upper bound EPS: {average_weighted * 1.2}")
+        print(f"Total Debt/Total Equity: {totalDebtToCapital}")
+        
+
+
+
 
 
 
