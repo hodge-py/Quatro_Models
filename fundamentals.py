@@ -14,7 +14,6 @@ class Fundamentals:
     def __init__(self, ticker, start_date, end_date):
         load_dotenv()
         api_key = os.getenv("FINNHUB") 
-        print(api_key)
         self.ticker = ticker
         self.start_date = start_date
         self.end_date = end_date
