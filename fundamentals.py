@@ -97,10 +97,17 @@ class Fundamentals:
             fairValues.iat[0,3] = np.nan
             fairValues.iat[0,4] = np.nan
 
-        if self.metric_df.loc['epsTTM','value'] > 0 and self.metric_df.loc['epsGrowthTTMYoy','value'] > 0:
-            fairValues.iat[0,5] = self.metric_df.loc['epsTTM','value'] * self.metric_df.loc['epsGrowthTTMYoy','value']
-            fairValues.iat[0,6] = (self.metric_df.loc['epsTTM','value'] * self.metric_df.loc['epsGrowthTTMYoy','value'] - self.close_price) / self.close_price
-        else:
+        
+        try:
+
+            if self.metric_df.loc['epsTTM','value'] > 0 and self.metric_df.loc['epsGrowthTTMYoy','value'] > 0:
+                fairValues.iat[0,5] = self.metric_df.loc['epsTTM','value'] * self.metric_df.loc['epsGrowthTTMYoy','value']
+                fairValues.iat[0,6] = (self.metric_df.loc['epsTTM','value'] * self.metric_df.loc['epsGrowthTTMYoy','value'] - self.close_price) / self.close_price
+            else:
+                fairValues.iat[0,5] = np.nan
+                fairValues.iat[0,6] = np.nan
+
+        except:
             fairValues.iat[0,5] = np.nan
             fairValues.iat[0,6] = np.nan
         
@@ -310,9 +317,10 @@ class Fundamentals:
         
         revenueHold = revenueHold[::-1]
         ticker = yf.Ticker(self.ticker)
-        print(ticker.financials.loc['Total Revenue'])
+        print(ticker.financials.loc['Total Revenue'][::-1])
         if len(revenueHold) == 0:
-            revenueHold = np.append(revenueHold, ticker.financials.loc['Total Revenue'])
+            reverseRevenue = ticker.financials.loc['Total Revenue'][::-1]
+            revenueHold = np.append(revenueHold, reverseRevenue)
         upslope = np.arange(0, len(revenueHold), 1)
         print(f"Revenue: {revenueHold}")
         sns.barplot(x=upslope, y=revenueHold)
