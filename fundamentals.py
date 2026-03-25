@@ -7,14 +7,18 @@ import yfinance as yf
 import pprint
 from datetime import datetime, timedelta
 import matplotlib.pyplot as plt
-
+from dotenv import load_dotenv
+import os
 
 class Fundamentals:
     def __init__(self, ticker, start_date, end_date):
+        load_dotenv()
+        api_key = os.getenv("FINNHUB") 
+        print(api_key)
         self.ticker = ticker
         self.start_date = start_date
         self.end_date = end_date
-        self.finnhub_client = finnhub.Client(api_key="d6t22lhr01qoqoiruqlgd6t22lhr01qoqoiruqm0")
+        self.finnhub_client = finnhub.Client(api_key=api_key)
         self.thresholds = {
             "currentRatioQuarterly": (1.1, 'min'),
             "epsGrowthTTMYoy": (15.0, 'min'),
