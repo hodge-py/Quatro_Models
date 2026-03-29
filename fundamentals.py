@@ -347,10 +347,102 @@ class Fundamentals:
 
         plt.legend(['Actual', 'Estimate'])
         plt.show()
+
+
+
+    def calculate_dcf(self,growth_rate=0.05, discount_rate=0.10, terminal_growth=0.02):
+        ticker = yf.Ticker(self.ticker)
         
+        # 1. Pull Historical Cash Flow
+        df_cf = ticker.cashflow
+        if df_cf.empty:
+            return "No cash flow data found."
+
+        # Extract Operating Cash Flow and CapEx
+        # Note: yfinance labels can vary slightly; these are the standard ones
+
+        try:
+            ocf = df_cf.loc['Operating Cash Flow']
+    
+            # Using 'Capital Expenditure' as found in your index list
+            capex = df_cf.loc['Capital Expenditure']
+            
+        except KeyError:
+            return "Required financial line items not found."
+
+        # Free Cash Flow (CapEx is usually negative in yf, so we add it)
+        fcf_history = ocf + capex
+        current_fcf = fcf_history.iloc[0] # Most recent year
+        
+        print(f"Current FCF for {self.ticker}: ${current_fcf:,.2f}")
+
+        # 2. Project Future Cash Flows (5 Years)
+        projected_fcfs = []
+        for i in range(1, 6):
+            fcf_next = current_fcf * ((1 + growth_rate) ** i)
+            projected_fcfs.append(fcf_next)
+
+        # 3. Calculate Terminal Value (TV)
+        # Formula: (FCF_Year5 * (1 + terminal_growth)) / (discount_rate - terminal_growth)
+        terminal_value = (projected_fcfs[-1] * (1 + terminal_growth)) / (discount_rate - terminal_growth)
+
+        # 4. Discount Everything to Present Value (PV)
+        pv_fcfs = sum([fcf / ((1 + discount_rate) ** (i + 1)) for i, fcf in enumerate(projected_fcfs)])
+        pv_terminal_value = terminal_value / ((1 + discount_rate) ** 5)
+
+        # 5. Enterprise Value
+        enterprise_value = round(float(pv_fcfs + pv_terminal_value),2)
+        
+        # 6. Get Equity Value (Add Cash, Sub Debt)
+        info = ticker.info
+        cash = info.get('totalCash', 0)
+        debt = info.get('totalDebt', 0)
+        shares = info.get('sharesOutstanding', 1)
+        
+        equity_value = round(float(enterprise_value + cash - debt),2)
+        intrinsic_price = round(float(equity_value / shares),2)
+
+        pprint.pprint({"Ticker": self.ticker,"Intrinsic Price": intrinsic_price,"Current Price": info.get('currentPrice'),"Enterprise Value": enterprise_value})
+            
 
 
+    def check_profitability(self):
+        ticker = yf.Ticker(self.ticker)
+        
+        # 1. Pull Annual Income Statement
+        annual_income = ticker.financials
+        
+        # 2. Pull Quarterly Income Statement (Better for turnarounds)
+        quarterly_income = ticker.quarterly_financials
+        
+        if 'Net Income' not in annual_income.index:
+            return "Net Income data not available."
 
+        # Extract Net Income rows
+        annual_ni = annual_income.loc['Net Income']
+        quarterly_ni = quarterly_income.loc['Net Income']
+
+        # 3. Calculate Trends
+        # Sort by date (oldest to newest) to see the direction
+        annual_ni = annual_ni.sort_index(ascending=True)
+        quarterly_ni = quarterly_ni.sort_index(ascending=True)
+
+        print(f"--- Profitability Analysis: {self.ticker} ---")
+        print("\nAnnual Net Income History:")
+        print(annual_ni)
+        
+        print("\nLast 4 Quarters Net Income:")
+        print(quarterly_ni.tail(4))
+
+        fig, ax = plt.subplots(1, 2, figsize=(15, 5))
+
+        fig.suptitle(f"Profitability Analysis: {self.ticker}")
+        sns.barplot (x=annual_ni.index, y=annual_ni, ax=ax[0])
+        sns.barplot (x=quarterly_ni.index, y=quarterly_ni, ax=ax[1])
+
+        plt.show()
+
+        return annual_ni, quarterly_ni
 
 
 
