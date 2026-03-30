@@ -444,6 +444,41 @@ class Fundamentals:
 
         return annual_ni, quarterly_ni
 
+    def analyze_turnaround(self):
+        ticker = yf.Ticker(self.ticker)
+        
+        # Fetch Data
+        info = ticker.info
+        income = ticker.financials
+        balance = ticker.balance_sheet
+        
+        # 1. Net Income Trend
+        ni = income.loc['Net Income']
+        ni_growth = ni.iloc[0] > ni.iloc[1] # Compare most recent to previous year
+        
+        # 2. Net Debt to EBITDA (Leverage)
+        # Formula: (Total Debt - Cash) / EBITDA
+        total_debt = info.get('totalDebt', 0)
+        total_cash = info.get('totalCash', 0)
+        ebitda = info.get('ebitda', 1) # Avoid division by zero
+        
+        net_debt_leverage = (total_debt - total_cash) / ebitda
+        
+        # 3. Gross Margin Trend
+        # Formula: (Revenue - COGS) / Revenue
+        rev = income.loc['Total Revenue']
+        cogs = income.loc['Cost Of Revenue']
+        current_margin = (rev.iloc[0] - cogs.iloc[0]) / rev.iloc[0]
+        prev_margin = (rev.iloc[1] - cogs.iloc[1]) / rev.iloc[1]
+        
+        print(f"--- Advanced Analysis: {self.ticker} ---")
+        print(f"Current Net Income: ${ni.iloc[0]:,.0f} (Growing: {ni_growth})")
+        print(f"Net Debt / EBITDA: {net_debt_leverage:.2f}x (Lower is better)")
+        print(f"Gross Margin: {current_margin:.2%} (Previous: {prev_margin:.2%})")
+        
+        if current_margin > prev_margin and ni_growth:
+            print("\nSUMMARY: Efficiency is improving despite revenue trends.")
+
 
 
 
