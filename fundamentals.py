@@ -240,7 +240,7 @@ class Fundamentals:
     def get_insider_sentiment(self):
         end_date = datetime.now().strftime('%Y-%m-%d')
         start_date = (datetime.now() - timedelta(days=90)).strftime('%Y-%m-%d')
-        
+        print(start_date, end_date)
         # Fetch data
         trades = self.finnhub_client.stock_insider_transactions(self.ticker, start_date, end_date)
         data = trades.get('data', [])
@@ -350,7 +350,7 @@ class Fundamentals:
 
 
 
-    def calculate_dcf(self,growth_rate=0.05, discount_rate=0.10, terminal_growth=0.02):
+    def calculate_dcf(self,growth_rate=0.07, discount_rate=0.10, terminal_growth=0.02):
         ticker = yf.Ticker(self.ticker)
         
         # 1. Pull Historical Cash Flow
@@ -478,6 +478,57 @@ class Fundamentals:
         
         if current_margin > prev_margin and ni_growth:
             print("\nSUMMARY: Efficiency is improving despite revenue trends.")
+
+    def check_fcf_trend(self):
+        ticker = yf.Ticker(self.ticker)
+        
+        # 1. Pull Annual and Quarterly Cash Flow Data
+        annual_cf = ticker.cashflow
+        quarterly_cf = ticker.quarterly_cashflow
+        
+        if annual_cf.empty or quarterly_cf.empty:
+            return f"Could not find cash flow data for {self.ticker}."
+
+        def get_fcf_series(df):
+            # Prefer pre-calculated 'Free Cash Flow' if available
+            if 'Free Cash Flow' in df.index:
+                return df.loc['Free Cash Flow']
+            # Fallback to manual calculation
+            elif 'Operating Cash Flow' in df.index and 'Capital Expenditure' in df.index:
+                return df.loc['Operating Cash Flow'] + df.loc['Capital Expenditure']
+            return None
+
+        annual_fcf = get_fcf_series(annual_cf)
+        quarterly_fcf = get_fcf_series(quarterly_cf)
+
+        # 2. Print Trends
+        print(f"--- FCF Analysis for {self.ticker} ---")
+        if annual_fcf is not None:
+            # Sort oldest to newest
+            annual_fcf = annual_fcf.sort_index(ascending=True)
+            print("\nAnnual FCF Trend:")
+            print(annual_fcf)
+
+            sns.barplot(x=annual_fcf.index, y=annual_fcf)
+            plt.show()
+            
+            # Calculate Year-over-Year (YoY) Change
+            yoy_change = annual_fcf.iloc[-1] - annual_fcf.iloc[-2]
+            status = "INCREASING" if yoy_change > 0 else "DECREASING"
+            print(f"Annual Direction: {status} ({yoy_change:,.0f})")
+
+        if quarterly_fcf is not None:
+            quarterly_fcf = quarterly_fcf.sort_index(ascending=True)
+            print("\nQuarterly FCF Trend (Last 4 Quarters):")
+            print(quarterly_fcf.tail(4))
+
+            sns.barplot(x=quarterly_fcf.index, y=quarterly_fcf)
+            plt.show()
+            
+            # Calculate Quarter-over-Quarter (QoQ) Change
+            qoq_change = quarterly_fcf.iloc[-1] - quarterly_fcf.iloc[-2]
+            status = "INCREASING" if qoq_change > 0 else "DECREASING"
+            print(f"Recent Quarterly Direction: {status} ({qoq_change:,.0f})")
 
 
 
