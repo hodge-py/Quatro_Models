@@ -1,0 +1,30 @@
+
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Stock Analysis Dashboard</title>
+        <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #121212; color: #e0e0e0; padding: 40px; line-height: 1.6; }
+            h1 { color: #ffffff; border-bottom: 2px solid #333; padding-bottom: 15px; }
+            .container { max-width: 800px; margin: auto; }
+            .report-link { 
+                display: flex; justify-content: space-between; align-items: center;
+                background: #1e1e1e; margin: 12px 0; padding: 18px; 
+                border-radius: 8px; text-decoration: none; color: #4db8ff;
+                border: 1px solid #333; transition: all 0.2s ease;
+            }
+            .report-link:hover { background: #252525; border-color: #4db8ff; transform: translateY(-2px); }
+            .report-link::after { content: '→'; font-weight: bold; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>📊 Stock Analysis Archive</h1>
+            <p>Click a ticker to view the detailed <strong>Dark Mode</strong> report.</p>
+            <a class="report-link" href="exports/Stock_Analysis_AI.TO.html">AI.TO</a>
+        </div>
+    </body>
+    </html>
+    

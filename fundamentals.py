@@ -369,7 +369,7 @@ class Fundamentals:
             return "Required financial line items not found."
 
         # Free Cash Flow (CapEx is usually negative in yf, so we add it)
-        current_fcf = ocf + capex if capex < 0 else ocf - capex
+        current_fcf = ocf - abs(capex)
         print(f"Current FCF for {self.ticker}: ${current_fcf:,.2f}")
 
         # 2. Project Future Cash Flows (5 Years)
