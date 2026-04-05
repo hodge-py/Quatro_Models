@@ -218,45 +218,60 @@ class Fundamentals:
     def get_news(self):
         """
         Pulls the latest news from Yahoo Finance based on the nested 'content' structure.
+        Returns: Date, Headline, Summary, and Link.
         """
         raw_news = self.ticker_obj.news
         formatted_news = []
-        
+
         for item in raw_news:
-            # Grab the nested content dictionary
+            # 1. Grab the nested content dictionary
             content = item.get('content', {})
-            
             if not content:
                 continue
                 
-            # 1. Parse the ISO date string (e.g., '2026-02-24T11:51:55Z')
+            # 2. Parse the ISO date string
             pub_date_str = content.get('pubDate')
             formatted_date = "N/A"
-            
             if pub_date_str:
                 try:
-                    # Strip the 'Z' and parse the ISO format
                     dt = datetime.strptime(pub_date_str, '%Y-%m-%dT%H:%M:%SZ')
                     formatted_date = dt.strftime('%Y-%m-%d %H:%M:%S')
                 except ValueError:
-                    # Fallback just in case the format varies
                     formatted_date = pub_date_str
 
-            # 2. Extract headline, publisher, and url
+            # 3. Extract the fields
             headline = content.get('title')
+            # 'summary' is at the top level of 'content' in this dictionary
+            summary = content.get('summary', 'No summary available.')
             publisher = content.get('provider', {}).get('displayName')
+            # Link is usually under 'canonicalUrl'
             url = content.get('canonicalUrl', {}).get('url')
 
-            formatted_news.append({
+            # 4. Create the dictionary for this item
+            hold = {
                 'date': formatted_date,
                 'headline': headline,
+                'summary': summary,
                 'publisher': publisher,
                 'url': url
-            })
-
-            pprint.pprint(formatted_news)
+            }
             
+            formatted_news.append(hold)
+
+        # 5. Sort the entire list by date (Descending) AFTER the loop
+        formatted_news = sorted(formatted_news, key=lambda x: x['date'], reverse=True)
+
+        # 6. Optional: Slice to top 5 or 10 if you don't want the whole list
+        # formatted_news = formatted_news[:5]
+
+        pprint.pprint(formatted_news)
+
         return formatted_news
+
+    # Usage example:
+    # news_results = your_class_instance.get_news()
+    # pprint.pprint(news_results)
+
 
     def get_inflections(self):
         """
