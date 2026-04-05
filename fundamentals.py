@@ -10,6 +10,9 @@ import matplotlib.pyplot as plt
 from dotenv import load_dotenv
 import os
 
+plt.style.use('dark_background')
+sns.set_theme(style="darkgrid", palette="dark", context="notebook")
+
 class Fundamentals:
     def __init__(self, ticker):
         self.ticker = ticker
