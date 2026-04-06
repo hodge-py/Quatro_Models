@@ -21,8 +21,13 @@ canadian_small_caps = [
     "WCP.TO", "PEY.TO", "TOU.TO", "EFN.TO", "EQB.TO"
 ]
 
+tickers = pd.read_csv('all_tickers.txt',sep='\0', header=[0]).to_numpy()
 
-for i in canadian_small_caps:
+tickers = tickers.flatten()
+
+print(tickers)
+
+for i in tickers:
     try:
         df = pd.read_csv('Tickers.csv')
         if i in df['Tickers'].values:
