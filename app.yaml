@@ -1,0 +1,5 @@
+kind: wasmer.io/App.v0
+name: Quatro_Models
+owner: hodge-py
+package: .
+app_id: da_nP7IptBUYEoo
